@@ -16,11 +16,11 @@ st.markdown("""
 This dashboard visualizes public sentiment toward various entities based on Twitter data.
 
 We explore:
-- Sentiment distribution
-- Word clouds
-- Entity-specific insights
-- Tweet behavior
-- Statistical sentiment testing
+- Overall sentiment distribution
+- Word cloud analysis
+- Entity-level sentiment breakdown
+- A deep dive into a specific entity
+- Behavioral insight: tweet length per sentiment
 """)
 
 # 2. Overall Sentiment Distribution
@@ -46,6 +46,32 @@ entity_counts.plot(kind='bar', color='lightcoral', ax=ax)
 plt.title(f"Sentiment for {selected_entity}")
 st.pyplot(fig)
 
+# Z-Test Section
+st.subheader("📏 Z-Test: Negative vs Positive Sentiment")
+
+# Filter selected entity's data
+entity_data = df[df['entity'] == selected_entity]
+neg_count = (entity_data['sentiment'] == 'Negative').sum()
+pos_count = (entity_data['sentiment'] == 'Positive').sum()
+total_count = len(entity_data)
+
+# Prepare for Z-Test
+count = [neg_count, pos_count]
+nobs = [total_count, total_count]
+
+# Run Z-Test (comparing if Negative > Positive)
+z_stat, p_val = proportions_ztest(count, nobs, alternative='larger')
+
+# Display results
+st.markdown(f"**Z-Score:** `{z_stat:.2f}`")
+st.markdown(f"**P-Value:** `{p_val:.4f}`")
+
+# Interpret result
+if p_val < 0.05:
+    st.success("**Conclusion:** Negative sentiment is significantly higher than Positive.")
+else:
+    st.info("**Conclusion:** No significant difference — Positive sentiment may dominate or they are similar.")
+
 # 4. Word Cloud
 st.header("☁️ Word Cloud by Sentiment")
 sentiment_choice = st.selectbox("Choose sentiment", ["Positive", "Negative"])
@@ -60,28 +86,7 @@ ax.imshow(wc, interpolation='bilinear')
 ax.axis('off')
 st.pyplot(fig)
 
-# 5. Deep Dive: Borderlands + Z-Test
-
-st.header("📌 Deep Dive: Borderlands")
-
-borderlands = df[df['entity'] == 'Borderlands']
-st.write(borderlands['sentiment'].value_counts())
-
-# Z-Test
-neg = (borderlands['sentiment'] == 'Negative').sum()
-pos = (borderlands['sentiment'] == 'Positive').sum()
-total = len(borderlands)
-z_stat, p_val = proportions_ztest([neg, pos], [total, total], alternative='larger')
-
-st.subheader("Z-Test Result")
-st.write(f"Z-Score: {z_stat:.2f}")
-st.write(f"P-Value: {p_val:.4f}")
-if p_val < 0.05:
-    st.success("Conclusion: Negative sentiment is significantly higher.")
-else:
-    st.info("Conclusion: No significant difference — positive dominates.")
-
-# 6. Tweet Length vs Sentiment
+# 5. Tweet Length vs Sentiment
 
 st.header("✏️ Tweet Length by Sentiment")
 
