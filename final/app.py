@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
 from statsmodels.stats.proportion import proportions_ztest
 import seaborn as sns
+from scipy.stats import f_oneway
 
 # Load data
 df = pd.read_csv('./final/cleaned_twitter_sentiment.csv')
@@ -17,10 +18,9 @@ This dashboard visualizes public sentiment toward various entities based on Twit
 
 We explore:
 - Overall sentiment distribution
-- Word cloud analysis
-- Entity-level sentiment breakdown
-- A deep dive into a specific entity
-- Behavioral insight: tweet length per sentiment
+- Entity-level sentiment breakdown + Z-Test
+- Word Cloud
+- Tweet Length + ANOVA Test
 """)
 
 # 2. Overall Sentiment Distribution
@@ -73,26 +73,57 @@ else:
     st.info("**Conclusion:** No significant difference — Positive sentiment may dominate or they are similar.")
 
 # 4. Word Cloud
-st.header("☁️ Word Cloud by Sentiment")
-sentiment_choice = st.selectbox("Choose sentiment", ["Positive", "Negative"])
-text = ' '.join(df[df['sentiment'] == sentiment_choice]['text'])
+st.header("☁️ Word Cloud by Entity & Sentiment")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    wc_entity = st.selectbox("Choose entity", top_entities, key="wc_entity")
+
+with col2:
+    wc_sentiment = st.selectbox("Choose sentiment", ["Positive", "Negative"], key="wc_sentiment")
+
+# Filter text
+wc_filtered = df[(df['entity'] == wc_entity) & (df['sentiment'] == wc_sentiment)]
+text = ' '.join(wc_filtered['text'])
 
 stopwords = set(STOPWORDS)
 stopwords.update(['game', 'pic', 'twitter'])
 
-wc = WordCloud(width=800, height=400, stopwords=stopwords).generate(text)
+wc = WordCloud(width=800, height=400, stopwords=stopwords, background_color="black").generate(text)
+
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.imshow(wc, interpolation='bilinear')
 ax.axis('off')
+plt.title(f"Word Cloud for {wc_entity} — {wc_sentiment}")
 st.pyplot(fig)
 
-# 5. Tweet Length vs Sentiment
-
+# 5. Tweet Length vs Sentiment + ANOVA
 st.header("✏️ Tweet Length by Sentiment")
 
-avg_len = df.groupby('sentiment')['length'].mean().sort_values()
+selected_entity_length = st.selectbox("Choose an Entity for Length Analysis", top_entities, key="length_entity")
+
+filtered_length_df = df[df['entity'] == selected_entity_length]
+
+avg_len = filtered_length_df.groupby('sentiment')['length'].mean().sort_values()
+
 fig, ax = plt.subplots()
 avg_len.plot(kind='bar', color='mediumseagreen', ax=ax)
-plt.title("Average Tweet Length per Sentiment")
+plt.title(f"Average Tweet Length per Sentiment — {selected_entity_length}")
+plt.ylabel("Avg Length (Characters)")
 st.pyplot(fig)
 
+# --- ANOVA Test ---
+st.subheader("📊 ANOVA Test: Does Tweet Length Differ by Sentiment?")
+
+groups = [group['length'].values for name, group in filtered_length_df.groupby('sentiment')]
+
+f_stat, p_val = f_oneway(*groups)
+
+st.markdown(f"**F-Statistic:** `{f_stat:.2f}`")
+st.markdown(f"**P-Value:** `{p_val:.4f}`")
+
+if p_val < 0.05:
+    st.success("**Conclusion:** There is a significant difference in tweet length across sentiment groups.")
+else:
+    st.info("**Conclusion:** No significant difference in tweet length across sentiment groups.")
