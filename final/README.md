@@ -50,7 +50,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 🔎 Sample Output
+## Sample Output
 
 - Sentiment bar charts  
 - Word clouds per entity & sentiment  
@@ -58,7 +58,7 @@ streamlit run app.py
 - Tweet length histograms  
 - Statistical test results with conclusions
 
-## 📝 Notes
+## Notes
 
 - You may need to download NLTK data manually if running offline:
   ```python
